@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>איזה יישוב לא קיים?</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Heebo', sans-serif;
+            background: #0c1a2e;
+            color: #fff;
+            min-height: 100vh;
+            overflow: hidden;
+            direction: rtl;
+        }
+
+        .game-container {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+        }
+
+        .left-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            position: relative;
+        }
+
+        .game-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .oref-logo {
+            width: 64px;
+            height: 64px;
+        }
+
+        .game-title {
+            font-size: 36px;
+            font-weight: 900;
+            color: #d4a020;
+            text-align: center;
+            text-shadow: 0 0 30px rgba(212, 160, 32, 0.3);
+        }
+
+        .game-subtitle {
+            font-size: 20px;
+            color: #8899aa;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 48px;
+            font-weight: 900;
+            color: #d4a020;
+            text-shadow: 0 0 20px rgba(212, 160, 32, 0.4);
+        }
+
+        .stat-label {
+            font-size: 16px;
+            color: #667788;
+            margin-top: 4px;
+        }
+
+        .guesses-indicator {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .guess-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #1a3050;
+            border: 2px solid #2a4060;
+            transition: all 0.3s;
+        }
+
+        .guess-dot.available {
+            background: #22b2c9;
+            border-color: #22b2c9;
+            box-shadow: 0 0 10px rgba(34, 178, 201, 0.5);
+        }
+
+        .guess-dot.used {
+            background: #ff4444;
+            border-color: #ff4444;
+            box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+        }
+
+        .guesses-label {
+            font-size: 14px;
+            color: #667788;
+            margin-top: 8px;
+        }
+
+        .message-area {
+            margin-top: 30px;
+            min-height: 60px;
+            text-align: center;
+        }
+
+        .message {
+            font-size: 22px;
+            font-weight: 700;
+            padding: 12px 30px;
+            border-radius: 8px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .message.correct {
+            color: #44ff44;
+            background: rgba(68, 255, 68, 0.1);
+            border: 1px solid rgba(68, 255, 68, 0.3);
+        }
+
+        .message.wrong {
+            color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+        }
+
+        .message.reveal {
+            color: #d4a020;
+            background: rgba(212, 160, 32, 0.1);
+            border: 1px solid rgba(212, 160, 32, 0.3);
+        }
+
+        /* Right panel */
+        .right-panel {
+            width: 36%;
+            min-width: 340px;
+            background: #e8e0d0;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .list-header {
+            background: #1a3a6a;
+            padding: 14px 20px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .list-header-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .list-header-logo {
+            width: 40px;
+            height: 40px;
+        }
+
+        .list-header-titles {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .list-header-title {
+            font-size: 13px;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .list-header-main {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .settlements-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+            background: #efe8d8;
+        }
+
+        .settlements-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .settlements-list::-webkit-scrollbar-track {
+            background: #e0d8c8;
+        }
+
+        .settlements-list::-webkit-scrollbar-thumb {
+            background: #c0b8a0;
+            border-radius: 3px;
+        }
+
+        .settlement-item {
+            padding: 9px 16px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+            cursor: pointer;
+            border-bottom: 1px solid #d8d0c0;
+            transition: all 0.2s;
+            position: relative;
+            user-select: none;
+            background: #efe8d8;
+            border-right: 4px solid #d4860a;
+            border-left: 4px solid #d4860a;
+        }
+
+        .settlement-item:hover:not(.disabled) {
+            background: #e0d6c2;
+        }
+
+        .settlement-item.disabled {
+            cursor: default;
+        }
+
+        .settlement-item.wrong-guess {
+            color: #cc2222;
+            background: #f5dede;
+            text-decoration: line-through;
+            border-right-color: #cc2222;
+            border-left-color: #cc2222;
+        }
+
+        .settlement-item.wrong-guess::after {
+            content: '✗';
+            position: absolute;
+            left: 16px;
+            color: #cc2222;
+            font-weight: 700;
+        }
+
+        .settlement-item.correct-guess {
+            color: #1a7a1a;
+            background: #d4f0d4;
+            font-weight: 700;
+            border-right-color: #1a7a1a;
+            border-left-color: #1a7a1a;
+        }
+
+        .settlement-item.correct-guess::after {
+            content: '✓';
+            position: absolute;
+            left: 16px;
+            color: #1a7a1a;
+            font-weight: 700;
+            font-size: 22px;
+        }
+
+        .settlement-item.revealed {
+            color: #1a7a1a;
+            background: #d4f0d4;
+            border-right-color: #1a7a1a;
+            border-left-color: #1a7a1a;
+            animation: pulseLight 0.6s ease;
+        }
+
+        .settlement-item.revealed::after {
+            content: '◄';
+            position: absolute;
+            left: 16px;
+            color: #1a7a1a;
+            font-weight: 700;
+        }
+
+        /* Screens */
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        .start-btn, .next-btn, .restart-btn {
+            margin-top: 30px;
+            padding: 16px 50px;
+            font-size: 22px;
+            font-weight: 700;
+            font-family: 'Heebo', sans-serif;
+            border: 2px solid #22b2c9;
+            background: rgba(34, 178, 201, 0.1);
+            color: #22b2c9;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .start-btn:hover, .next-btn:hover, .restart-btn:hover {
+            background: rgba(34, 178, 201, 0.25);
+            box-shadow: 0 0 20px rgba(34, 178, 201, 0.3);
+            transform: scale(1.05);
+        }
+
+        .next-btn {
+            padding: 12px 36px;
+            font-size: 18px;
+        }
+
+        /* Round selector */
+        .round-selector {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .round-selector-label {
+            font-size: 16px;
+            color: #667788;
+            margin-top: 20px;
+        }
+
+        .round-btn {
+            width: 56px;
+            height: 56px;
+            font-size: 24px;
+            font-weight: 700;
+            font-family: 'Heebo', sans-serif;
+            border: 2px solid #2a4060;
+            background: rgba(34, 178, 201, 0.05);
+            color: #667788;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .round-btn:hover {
+            border-color: #22b2c9;
+            color: #22b2c9;
+            background: rgba(34, 178, 201, 0.1);
+        }
+
+        .round-btn.selected {
+            border-color: #22b2c9;
+            background: rgba(34, 178, 201, 0.2);
+            color: #22b2c9;
+            box-shadow: 0 0 14px rgba(34, 178, 201, 0.3);
+        }
+
+        /* Game Over */
+        .final-score {
+            font-size: 80px;
+            font-weight: 900;
+            color: #d4a020;
+            text-shadow: 0 0 40px rgba(212, 160, 32, 0.4);
+        }
+
+        .final-label {
+            font-size: 24px;
+            color: #667788;
+            margin-top: 8px;
+        }
+
+        .final-max {
+            font-size: 18px;
+            color: #445566;
+            margin-top: 4px;
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(34, 178, 201, 0.2);
+            border-top-color: #22b2c9;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .loading-text {
+            color: #667788;
+            font-size: 18px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulseLight {
+            0%, 100% { background: #d4f0d4; }
+            50% { background: #b8e8b8; }
+        }
+
+        .instructions {
+            max-width: 400px;
+            color: #667788;
+            font-size: 16px;
+            line-height: 1.8;
+            margin-top: 20px;
+        }
+
+        .round-transition {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(12, 26, 46, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .round-transition.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .round-transition-text {
+            font-size: 36px;
+            font-weight: 900;
+            color: #d4a020;
+            text-shadow: 0 0 30px rgba(212, 160, 32, 0.5);
+        }
+
+        #fireworksCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .end-congrats {
+            font-size: 28px;
+            font-weight: 700;
+            color: #22b2c9;
+            margin-bottom: 10px;
+            animation: fadeIn 0.6s ease;
+            z-index: 6;
+            position: relative;
+        }
+
+        #endScreen .game-title,
+        #endScreen .final-score,
+        #endScreen .final-label,
+        #endScreen .final-max,
+        #endScreen .restart-btn {
+            position: relative;
+            z-index: 6;
+        }
+
+        .map-popup {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            width: 300px;
+            background: #152640;
+            border: 2px solid #22b2c9;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+            z-index: 15;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .map-popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: #1a3a6a;
+        }
+
+        .map-popup-title {
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .map-popup-close {
+            background: none;
+            border: none;
+            color: #8899aa;
+            font-size: 20px;
+            cursor: pointer;
+            font-family: 'Heebo', sans-serif;
+            line-height: 1;
+            padding: 0 4px;
+        }
+
+        .map-popup-close:hover {
+            color: #fff;
+        }
+
+        .map-popup iframe {
+            width: 100%;
+            height: 220px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="right-panel">
+            <div class="list-header">
+                <div class="list-header-row">
+                    <img class="list-header-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/IDF_Home_Front_Command_Colored_Tag.svg/250px-IDF_Home_Front_Command_Colored_Tag.svg.png" alt="סמל פיקוד העורף">
+                    <div class="list-header-titles">
+                        <div class="list-header-title">התרעות פיקוד העורף</div>
+                        <div class="list-header-main">ירי רקטות וטילים</div>
+                    </div>
+                </div>
+            </div>
+            <div class="settlements-list" id="settlementsList"></div>
+        </div>
+
+        <div class="left-panel">
+            <!-- Start Screen -->
+            <div class="screen active" id="startScreen">
+                <div class="game-header">
+                    <img class="oref-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/IDF_Home_Front_Command_Colored_Tag.svg/250px-IDF_Home_Front_Command_Colored_Tag.svg.png" alt="סמל פיקוד העורף">
+                    <div class="game-title">ירי רקטות וטילים — פיקוד העורף</div>
+                </div>
+                <div class="game-subtitle">משחק ניחוש יישובים</div>
+                <div class="instructions">
+                    בכל סיבוב תוצג רשימה של 15 יישובים.<br>
+                    אחד מהם <strong style="color:#d4a020">מומצא</strong> ולא באמת קיים.<br>
+                    מצאו אותו! יש לכם 2 ניחושים בכל סיבוב.<br>
+                    <strong style="color:#22b2c9">5 נקודות</strong> על כל ניחוש נכון.
+                </div>
+                <div class="round-selector-label">כמה סיבובים?</div>
+                <div class="round-selector">
+                    <button class="round-btn" data-rounds="3">3</button>
+                    <button class="round-btn selected" data-rounds="4">4</button>
+                    <button class="round-btn" data-rounds="5">5</button>
+                </div>
+                <button class="start-btn" id="startBtn">התחל משחק</button>
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <div class="loading-text">טוען יישובים...</div>
