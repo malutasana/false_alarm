@@ -587,3 +587,461 @@
                 <div class="loading" id="loading">
                     <div class="spinner"></div>
                     <div class="loading-text">טוען יישובים...</div>
+                </div>
+            </div>
+
+            <!-- Game Screen -->
+            <div class="screen" id="gameScreen">
+                <div class="stats-bar">
+                    <div class="stat">
+                        <div class="stat-value" id="scoreDisplay">0</div>
+                        <div class="stat-label">ניקוד</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="roundDisplay">1/5</div>
+                        <div class="stat-label">סיבוב</div>
+                    </div>
+                </div>
+                <div class="guesses-indicator">
+                    <div class="guess-dot available" id="guessDot1"></div>
+                    <div class="guess-dot available" id="guessDot2"></div>
+                </div>
+                <div class="guesses-label">ניחושים נותרים</div>
+                <div class="message-area" id="messageArea"></div>
+                <button class="next-btn" id="nextBtn" style="display:none">סיבוב הבא ←</button>
+            </div>
+
+            <!-- Game Over Screen -->
+            <div class="screen" id="endScreen">
+                <div class="end-congrats" id="endCongrats">כל הכבוד!</div>
+                <div class="game-title">המשחק נגמר!</div>
+                <div class="final-score" id="finalScore">0</div>
+                <div class="final-label">נקודות</div>
+                <div class="final-max" id="finalMax">מתוך 25 אפשריות</div>
+                <button class="restart-btn" id="restartBtn">שחק שוב</button>
+            </div>
+
+            <canvas id="fireworksCanvas"></canvas>
+            <div id="mapContainer"></div>
+        </div>
+
+        <div class="round-transition" id="roundTransition">
+            <div class="round-transition-text" id="roundTransitionText"></div>
+        </div>
+    </div>
+
+    <script>
+        const DATA_URL = 'https://raw.githubusercontent.com/royts/israel-cities/master/israel-cities.json';
+        const MAX_GUESSES = 2;
+        const POINTS_PER_CORRECT = 5;
+        const SETTLEMENTS_PER_ROUND = 15;
+
+        const EXCLUDED_KEYWORDS = [
+            'בסיס', 'מחנה', 'בי"ח', 'בית חולים', 'בי״ח',
+            'תחנה', 'צומת', 'מפעל', 'אזור תעשי',
+            'מכללה', 'אוניברסיט', 'מרכז רפואי', 'קריה',
+            'נמל תעופה', 'שדה תעופה', 'תחנת', 'מסוף',
+            'מפקדה', 'גדוד', 'חטיבת', 'אוגדת', 'פיקוד',
+            'מרפאה', 'קמפוס', 'מעבר', 'מחסום',
+            'צימר', 'הארחה', 'חאן', 'אכסני', 'פונדק',
+            'מלון', 'לינה', 'נופש', 'ריזורט', 'קמפינג',
+            'חניון', 'בי"ס', 'בי״ס'
+        ];
+
+        const EXCLUDED_EXACT = [
+            'שלווה במדבר', 'עין כרם-בי"ס חקלאי'
+        ];
+
+        const PREFIXES = [
+            'כפר', 'נווה', 'גבעת', 'תל', 'מעלה', 'בית', 'עין',
+            'רמת', 'גני', 'אור', 'מצפה', 'נחלת', 'שדה', 'גבע',
+            'באר', 'קרית', 'מגדל', 'נוף', 'הר', 'אבן', 'גן',
+            'מעון', 'נחל', 'מבוא', 'עמק', 'חוף'
+        ];
+
+        const SUFFIXES = [
+            'אורה', 'שמש', 'חיים', 'נריה', 'עוז', 'דרום', 'מזרח',
+            'ציון', 'שלום', 'יצחק', 'אריה', 'דוד', 'עמי', 'נוגה',
+            'צפון', 'רון', 'טוב', 'אלון', 'גלים', 'ברוך', 'הדר',
+            'ענן', 'שקד', 'תמר', 'לבנה', 'גולן', 'כרמל', 'עדן',
+            'נחום', 'דניאל', 'אבנר', 'מנחם', 'אמיר', 'סיני',
+            'מוריה', 'שגב', 'גבורה', 'עופר', 'יובל', 'ניצן'
+        ];
+
+        let allSettlements = [];
+        let settlementsSet = new Set();
+        let totalRounds = 4;
+        let currentRound = 0;
+        let score = 0;
+        let guessesLeft = 0;
+        let fakeSettlement = '';
+        let roundActive = false;
+
+        const startScreen = document.getElementById('startScreen');
+        const gameScreen = document.getElementById('gameScreen');
+        const endScreen = document.getElementById('endScreen');
+        const startBtn = document.getElementById('startBtn');
+        const loading = document.getElementById('loading');
+        const settlementsList = document.getElementById('settlementsList');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const roundDisplay = document.getElementById('roundDisplay');
+        const messageArea = document.getElementById('messageArea');
+        const nextBtn = document.getElementById('nextBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const finalScore = document.getElementById('finalScore');
+        const finalMax = document.getElementById('finalMax');
+        const guessDot1 = document.getElementById('guessDot1');
+        const guessDot2 = document.getElementById('guessDot2');
+        const roundTransition = document.getElementById('roundTransition');
+        const roundTransitionText = document.getElementById('roundTransitionText');
+
+        document.querySelectorAll('.round-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.round-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                totalRounds = parseInt(btn.dataset.rounds);
+            });
+        });
+
+        async function fetchSettlements() {
+            const response = await fetch(DATA_URL);
+            const data = await response.json();
+            allSettlements = data
+                .map(s => s.name.trim())
+                .filter(name => {
+                    if (!name || name === 'שם_ישוב') return false;
+                    if (name.includes('(') || name.includes(')')) return false;
+                    if (name.includes('שבט')) return false;
+                    if (name.length < 2 || name.length > 20) return false;
+                    for (const kw of EXCLUDED_KEYWORDS) {
+                        if (name.includes(kw)) return false;
+                    }
+                    if (EXCLUDED_EXACT.includes(name)) return false;
+                    return true;
+                });
+            settlementsSet = new Set(allSettlements);
+        }
+
+        function generateFakeName() {
+            for (let attempt = 0; attempt < 200; attempt++) {
+                const prefix = PREFIXES[Math.floor(Math.random() * PREFIXES.length)];
+                const suffix = SUFFIXES[Math.floor(Math.random() * SUFFIXES.length)];
+                const fakeName = prefix + ' ' + suffix;
+                if (!settlementsSet.has(fakeName)) {
+                    return fakeName;
+                }
+            }
+            return 'כפר השקמה';
+        }
+
+        function shuffle(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function showScreen(screen) {
+            [startScreen, gameScreen, endScreen].forEach(s => s.classList.remove('active'));
+            screen.classList.add('active');
+        }
+
+        function updateStats() {
+            scoreDisplay.textContent = score;
+            roundDisplay.textContent = `${currentRound}/${totalRounds}`;
+        }
+
+        function updateGuessDots() {
+            guessDot1.className = 'guess-dot ' + (guessesLeft >= 1 ? 'available' : 'used');
+            guessDot2.className = 'guess-dot ' + (guessesLeft >= 2 ? 'available' : 'used');
+        }
+
+        function showMessage(text, type) {
+            messageArea.innerHTML = `<div class="message ${type}">${text}</div>`;
+        }
+
+        function clearMessage() {
+            messageArea.innerHTML = '';
+        }
+
+        function showRoundTransition(text) {
+            return new Promise(resolve => {
+                roundTransitionText.textContent = text;
+                roundTransition.classList.add('active');
+                setTimeout(() => {
+                    roundTransition.classList.remove('active');
+                    resolve();
+                }, 1200);
+            });
+        }
+
+        async function startGame() {
+            score = 0;
+            currentRound = 0;
+            showScreen(gameScreen);
+            await startRound();
+        }
+
+        async function startRound() {
+            currentRound++;
+            guessesLeft = MAX_GUESSES;
+            roundActive = true;
+            clearMessage();
+            hideMap();
+            nextBtn.style.display = 'none';
+            updateStats();
+            updateGuessDots();
+
+            if (currentRound > 1) {
+                await showRoundTransition(`סיבוב ${currentRound}`);
+            }
+
+            const realOnes = shuffle([...allSettlements]).slice(0, SETTLEMENTS_PER_ROUND - 1);
+            fakeSettlement = generateFakeName();
+            const roundList = shuffle([...realOnes, fakeSettlement]);
+
+            settlementsList.innerHTML = '';
+            roundList.forEach(name => {
+                const item = document.createElement('div');
+                item.className = 'settlement-item';
+                item.textContent = name;
+                item.addEventListener('click', () => handleGuess(item, name));
+                settlementsList.appendChild(item);
+            });
+
+            settlementsList.scrollTop = 0;
+        }
+
+        function handleGuess(element, name) {
+            if (!roundActive) return;
+            if (element.classList.contains('wrong-guess')) return;
+
+            if (name === fakeSettlement) {
+                element.classList.add('correct-guess');
+                score += POINTS_PER_CORRECT;
+                showMessage('כל הכבוד! מצאת את המומצא! +5 נקודות', 'correct');
+                hideMap();
+                endRound(true);
+            } else {
+                guessesLeft--;
+                element.classList.add('wrong-guess');
+                element.classList.add('disabled');
+                updateGuessDots();
+                showMapForSettlement(name);
+
+                if (guessesLeft > 0) {
+                    showMessage('לא נכון! נשאר לך עוד ניחוש אחד', 'wrong');
+                } else {
+                    showMessage('נגמרו הניחושים!', 'wrong');
+                    endRound(false);
+                }
+            }
+            updateStats();
+        }
+
+        function endRound(guessedCorrectly) {
+            roundActive = false;
+
+            document.querySelectorAll('.settlement-item').forEach(item => {
+                item.classList.add('disabled');
+            });
+
+            if (!guessedCorrectly) {
+                setTimeout(() => {
+                    document.querySelectorAll('.settlement-item').forEach(item => {
+                        if (item.textContent === fakeSettlement) {
+                            item.classList.add('revealed');
+                            item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    });
+                    showMessage(`היישוב המומצא היה: ${fakeSettlement}`, 'reveal');
+                }, 800);
+            }
+
+            const delay = guessedCorrectly ? 1500 : 2500;
+            setTimeout(() => {
+                if (currentRound >= totalRounds) {
+                    endGame();
+                } else {
+                    nextBtn.style.display = 'inline-block';
+                }
+            }, delay);
+        }
+
+        function endGame() {
+            showScreen(endScreen);
+            finalScore.textContent = score;
+            finalMax.textContent = `מתוך ${totalRounds * POINTS_PER_CORRECT} אפשריות`;
+            settlementsList.innerHTML = '';
+            startFireworks();
+        }
+
+        // --- Fireworks (scoped to left panel) ---
+        const fwCanvas = document.getElementById('fireworksCanvas');
+        const fwCtx = fwCanvas.getContext('2d');
+        let particles = [];
+        let rockets = [];
+        let fwRunning = false;
+        let fwAnimId = null;
+
+        function resizeFwCanvas() {
+            const panel = document.querySelector('.left-panel');
+            fwCanvas.width = panel.offsetWidth;
+            fwCanvas.height = panel.offsetHeight;
+        }
+        window.addEventListener('resize', resizeFwCanvas);
+        resizeFwCanvas();
+
+        function randomColor() {
+            const colors = [
+                '#ff4444', '#ff8800', '#ffcc00', '#44ff44',
+                '#00ccff', '#8844ff', '#ff44cc', '#ffffff',
+                '#d4a020', '#22b2c9', '#ff6688', '#44ddaa'
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function spawnRocket() {
+            rockets.push({
+                x: Math.random() * fwCanvas.width * 0.8 + fwCanvas.width * 0.1,
+                y: fwCanvas.height,
+                targetY: Math.random() * fwCanvas.height * 0.35 + 40,
+                speed: 5 + Math.random() * 3,
+                color: randomColor()
+            });
+        }
+
+        function explode(x, y, color) {
+            const count = 50 + Math.floor(Math.random() * 30);
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 4.5 + 1;
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1,
+                    decay: 0.015 + Math.random() * 0.018,
+                    color,
+                    size: Math.random() * 2.5 + 1
+                });
+            }
+        }
+
+        function fwLoop() {
+            if (!fwRunning) return;
+            fwCtx.globalCompositeOperation = 'source-over';
+            fwCtx.fillStyle = 'rgba(12, 26, 46, 0.18)';
+            fwCtx.fillRect(0, 0, fwCanvas.width, fwCanvas.height);
+            fwCtx.globalCompositeOperation = 'lighter';
+
+            for (let i = rockets.length - 1; i >= 0; i--) {
+                const r = rockets[i];
+                r.y -= r.speed;
+                fwCtx.beginPath();
+                fwCtx.arc(r.x, r.y, 2, 0, Math.PI * 2);
+                fwCtx.fillStyle = r.color;
+                fwCtx.fill();
+                if (r.y <= r.targetY) {
+                    explode(r.x, r.y, r.color);
+                    rockets.splice(i, 1);
+                }
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.04;
+                p.vx *= 0.99;
+                p.life -= p.decay;
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+                fwCtx.globalAlpha = p.life;
+                fwCtx.beginPath();
+                fwCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                fwCtx.fillStyle = p.color;
+                fwCtx.fill();
+            }
+            fwCtx.globalAlpha = 1;
+            fwAnimId = requestAnimationFrame(fwLoop);
+        }
+
+        function startFireworks() {
+            fwRunning = true;
+            particles = [];
+            rockets = [];
+            resizeFwCanvas();
+            fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
+
+            let launched = 0;
+            const launchInterval = setInterval(() => {
+                if (!fwRunning) { clearInterval(launchInterval); return; }
+                spawnRocket();
+                if (Math.random() > 0.4) spawnRocket();
+                launched++;
+                if (launched > 12) clearInterval(launchInterval);
+            }, 300);
+
+            fwLoop();
+            setTimeout(() => stopFireworks(), 5000);
+        }
+
+        function stopFireworks() {
+            fwRunning = false;
+            if (fwAnimId) cancelAnimationFrame(fwAnimId);
+            setTimeout(() => {
+                fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
+            }, 1500);
+        }
+
+        // --- Map popup for wrong guesses ---
+        const mapContainer = document.getElementById('mapContainer');
+
+        function showMapForSettlement(name) {
+            hideMap();
+            const query = encodeURIComponent(name + ', ישראל');
+            const popup = document.createElement('div');
+            popup.className = 'map-popup';
+            popup.innerHTML = `
+                <div class="map-popup-header">
+                    <span class="map-popup-title">${name} נמצא כאן:</span>
+                    <button class="map-popup-close" onclick="hideMap()">✕</button>
+                </div>
+                <iframe src="https://maps.google.com/maps?q=${query}&t=m&z=11&output=embed&hl=he" loading="lazy"></iframe>
+            `;
+            mapContainer.appendChild(popup);
+        }
+
+        function hideMap() {
+            mapContainer.innerHTML = '';
+        }
+
+        startBtn.addEventListener('click', async () => {
+            startBtn.style.display = 'none';
+            loading.classList.add('active');
+            try {
+                await fetchSettlements();
+                loading.classList.remove('active');
+                await startGame();
+            } catch (e) {
+                loading.classList.remove('active');
+                startBtn.style.display = 'inline-block';
+                alert('שגיאה בטעינת הנתונים. אנא נסה שנית.');
+            }
+        });
+
+        nextBtn.addEventListener('click', () => startRound());
+
+        restartBtn.addEventListener('click', () => {
+            stopFireworks();
+            showScreen(startScreen);
+            startBtn.style.display = 'inline-block';
+            settlementsList.innerHTML = '';
+        });
+    </script>
+</body>
+</html>
