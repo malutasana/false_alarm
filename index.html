@@ -869,6 +869,7 @@
         const fwCtx = fwCanvas.getContext('2d');
         let particles = [];
         let rockets = [];
+        let missiles = [];
         let fwRunning = false;
         let fwAnimId = null;
 
@@ -896,6 +897,18 @@
                 targetY: Math.random() * fwCanvas.height * 0.35 + 40,
                 speed: 5 + Math.random() * 3,
                 color: randomColor()
+            });
+        }
+
+        function spawnMissile() {
+            const startX = fwCanvas.width * 0.6 + Math.random() * fwCanvas.width * 0.4;
+            const startY = -30 - Math.random() * 40;
+            missiles.push({
+                x: startX,
+                y: startY,
+                vx: -(2.5 + Math.random() * 1.5),
+                vy: 2.5 + Math.random() * 1.5,
+                trail: []
             });
         }
 
@@ -953,6 +966,93 @@
                 fwCtx.fillStyle = p.color;
                 fwCtx.fill();
             }
+
+            fwCtx.globalCompositeOperation = 'source-over';
+            for (let i = missiles.length - 1; i >= 0; i--) {
+                const m = missiles[i];
+                m.trail.push({ x: m.x, y: m.y });
+                if (m.trail.length > 25) m.trail.shift();
+                m.x += m.vx;
+                m.y += m.vy;
+
+                const angle = Math.atan2(m.vy, m.vx);
+
+                for (let t = 0; t < m.trail.length; t++) {
+                    const ratio = t / m.trail.length;
+                    const size = ratio * 3.5;
+                    fwCtx.globalAlpha = ratio * 0.7;
+                    fwCtx.beginPath();
+                    fwCtx.arc(m.trail[t].x, m.trail[t].y, size, 0, Math.PI * 2);
+                    const r = 255, g = Math.floor(100 + ratio * 80), b = Math.floor(ratio * 30);
+                    fwCtx.fillStyle = `rgb(${r},${g},${b})`;
+                    fwCtx.fill();
+                }
+
+                fwCtx.globalAlpha = 1;
+                fwCtx.save();
+                fwCtx.translate(m.x, m.y);
+                fwCtx.rotate(angle);
+
+                // body
+                fwCtx.fillStyle = '#c8d0d8';
+                fwCtx.beginPath();
+                fwCtx.ellipse(0, 0, 16, 5, 0, 0, Math.PI * 2);
+                fwCtx.fill();
+
+                // nose cone
+                fwCtx.fillStyle = '#ff3333';
+                fwCtx.beginPath();
+                fwCtx.moveTo(16, 0);
+                fwCtx.lineTo(10, -4.5);
+                fwCtx.lineTo(10, 4.5);
+                fwCtx.closePath();
+                fwCtx.fill();
+
+                // fins
+                fwCtx.fillStyle = '#667788';
+                fwCtx.beginPath();
+                fwCtx.moveTo(-12, -4);
+                fwCtx.lineTo(-18, -10);
+                fwCtx.lineTo(-8, -4);
+                fwCtx.closePath();
+                fwCtx.fill();
+                fwCtx.beginPath();
+                fwCtx.moveTo(-12, 4);
+                fwCtx.lineTo(-18, 10);
+                fwCtx.lineTo(-8, 4);
+                fwCtx.closePath();
+                fwCtx.fill();
+
+                // window
+                fwCtx.fillStyle = '#44ccff';
+                fwCtx.beginPath();
+                fwCtx.arc(6, 0, 2.5, 0, Math.PI * 2);
+                fwCtx.fill();
+
+                // exhaust flame
+                fwCtx.fillStyle = '#ff8800';
+                fwCtx.beginPath();
+                fwCtx.moveTo(-14, 0);
+                fwCtx.lineTo(-22 - Math.random() * 6, -3);
+                fwCtx.lineTo(-22 - Math.random() * 6, 3);
+                fwCtx.closePath();
+                fwCtx.fill();
+                fwCtx.fillStyle = '#ffcc00';
+                fwCtx.beginPath();
+                fwCtx.moveTo(-14, 0);
+                fwCtx.lineTo(-19 - Math.random() * 4, -1.5);
+                fwCtx.lineTo(-19 - Math.random() * 4, 1.5);
+                fwCtx.closePath();
+                fwCtx.fill();
+
+                fwCtx.restore();
+
+                if (m.x < -40 || m.y > fwCanvas.height + 40) {
+                    missiles.splice(i, 1);
+                }
+            }
+            fwCtx.globalCompositeOperation = 'lighter';
+
             fwCtx.globalAlpha = 1;
             fwAnimId = requestAnimationFrame(fwLoop);
         }
@@ -961,6 +1061,7 @@
             fwRunning = true;
             particles = [];
             rockets = [];
+            missiles = [];
             resizeFwCanvas();
             fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
 
@@ -972,6 +1073,14 @@
                 launched++;
                 if (launched > 12) clearInterval(launchInterval);
             }, 300);
+
+            let missileCount = 0;
+            const missileInterval = setInterval(() => {
+                if (!fwRunning) { clearInterval(missileInterval); return; }
+                spawnMissile();
+                missileCount++;
+                if (missileCount > 8) clearInterval(missileInterval);
+            }, 500);
 
             fwLoop();
             setTimeout(() => stopFireworks(), 5000);
