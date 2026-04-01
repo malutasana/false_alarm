@@ -3,7 +3,7 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>איזה יישוב לא קיים?</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;900&display=swap');
@@ -375,23 +375,12 @@
         }
 
         /* Game Over */
-        .final-score {
-            font-size: 80px;
-            font-weight: 900;
-            color: #d4a020;
-            text-shadow: 0 0 40px rgba(212, 160, 32, 0.4);
-        }
-
         .final-label {
-            font-size: 24px;
-            color: #667788;
-            margin-top: 8px;
-        }
-
-        .final-max {
-            font-size: 18px;
-            color: #445566;
-            margin-top: 4px;
+            font-size: 32px;
+            font-weight: 700;
+            color: #d4a020;
+            text-shadow: 0 0 30px rgba(212, 160, 32, 0.3);
+            margin-top: 16px;
         }
 
         /* Loading */
@@ -491,9 +480,7 @@
         }
 
         #endScreen .game-title,
-        #endScreen .final-score,
         #endScreen .final-label,
-        #endScreen .final-max,
         #endScreen .restart-btn {
             position: relative;
             z-index: 6;
@@ -546,6 +533,165 @@
             width: 100%;
             height: 220px;
             border: none;
+        }
+
+        /* ========== Mobile ========== */
+        @media (max-width: 768px) {
+            body {
+                overflow: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .game-container {
+                flex-direction: column-reverse;
+                height: auto;
+                min-height: 100vh;
+            }
+
+            .right-panel {
+                width: 100%;
+                min-width: unset;
+                max-height: none;
+            }
+
+            .settlements-list {
+                max-height: none;
+                overflow-y: visible;
+            }
+
+            .left-panel {
+                padding: 20px 16px;
+                min-height: auto;
+            }
+
+            .game-header {
+                gap: 10px;
+                margin-bottom: 8px;
+            }
+
+            .oref-logo {
+                width: 44px;
+                height: 44px;
+            }
+
+            .game-title {
+                font-size: 22px;
+            }
+
+            .game-subtitle {
+                font-size: 16px;
+                margin-bottom: 16px;
+            }
+
+            .instructions {
+                font-size: 14px;
+                line-height: 1.6;
+                margin-top: 12px;
+            }
+
+            .round-selector-label {
+                margin-top: 14px;
+                font-size: 14px;
+            }
+
+            .round-selector {
+                margin-top: 14px;
+            }
+
+            .round-btn {
+                width: 48px;
+                height: 48px;
+                font-size: 20px;
+            }
+
+            .start-btn, .next-btn, .restart-btn {
+                margin-top: 18px;
+                padding: 14px 40px;
+                font-size: 18px;
+            }
+
+            .stats-bar {
+                gap: 28px;
+                margin-bottom: 14px;
+            }
+
+            .stat-value {
+                font-size: 34px;
+            }
+
+            .stat-label {
+                font-size: 13px;
+            }
+
+            .guesses-indicator {
+                margin-top: 10px;
+            }
+
+            .message-area {
+                margin-top: 14px;
+                min-height: 40px;
+            }
+
+            .message {
+                font-size: 16px;
+                padding: 8px 16px;
+            }
+
+            .settlement-item {
+                padding: 10px 14px;
+                font-size: 17px;
+            }
+
+            .list-header {
+                padding: 10px 14px;
+            }
+
+            .list-header-main {
+                font-size: 17px;
+            }
+
+            .list-header-logo {
+                width: 32px;
+                height: 32px;
+            }
+
+            .end-congrats {
+                font-size: 22px;
+            }
+
+            .final-label {
+                font-size: 22px;
+            }
+
+            #fireworksCanvas {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+            }
+
+            .map-popup {
+                position: fixed;
+                bottom: 0;
+                right: 0;
+                left: 0;
+                width: 100%;
+                border-radius: 12px 12px 0 0;
+                max-height: 50vh;
+            }
+
+            .map-popup iframe {
+                height: 200px;
+            }
+
+            .round-transition {
+                position: fixed;
+            }
+
+            .round-transition-text {
+                font-size: 28px;
+            }
         }
     </style>
 </head>
@@ -610,15 +756,14 @@
                 <div class="guesses-label">ניחושים נותרים</div>
                 <div class="message-area" id="messageArea"></div>
                 <button class="next-btn" id="nextBtn" style="display:none">סיבוב הבא ←</button>
+                <button class="next-btn" id="endBtn" style="display:none">סיום</button>
             </div>
 
             <!-- Game Over Screen -->
             <div class="screen" id="endScreen">
                 <div class="end-congrats" id="endCongrats">כל הכבוד!</div>
                 <div class="game-title">המשחק נגמר!</div>
-                <div class="final-score" id="finalScore">0</div>
-                <div class="final-label">נקודות</div>
-                <div class="final-max" id="finalMax">מתוך 25 אפשריות</div>
+                <div class="final-label" id="finalLabel">הרווחת 0 נקודות מתוך 20</div>
                 <button class="restart-btn" id="restartBtn">שחק שוב</button>
             </div>
 
@@ -689,8 +834,8 @@
         const messageArea = document.getElementById('messageArea');
         const nextBtn = document.getElementById('nextBtn');
         const restartBtn = document.getElementById('restartBtn');
-        const finalScore = document.getElementById('finalScore');
-        const finalMax = document.getElementById('finalMax');
+        const endBtn = document.getElementById('endBtn');
+        const finalLabel = document.getElementById('finalLabel');
         const guessDot1 = document.getElementById('guessDot1');
         const guessDot2 = document.getElementById('guessDot2');
         const roundTransition = document.getElementById('roundTransition');
@@ -791,6 +936,7 @@
             clearMessage();
             hideMap();
             nextBtn.style.display = 'none';
+            endBtn.style.display = 'none';
             updateStats();
             updateGuessDots();
 
@@ -863,7 +1009,7 @@
             const delay = guessedCorrectly ? 1500 : 2500;
             setTimeout(() => {
                 if (currentRound >= totalRounds) {
-                    endGame();
+                    endBtn.style.display = 'inline-block';
                 } else {
                     nextBtn.style.display = 'inline-block';
                 }
@@ -872,9 +1018,11 @@
 
         function endGame() {
             showScreen(endScreen);
-            finalScore.textContent = score;
-            finalMax.textContent = `מתוך ${totalRounds * POINTS_PER_CORRECT} אפשריות`;
+            finalLabel.textContent = `הרווחת ${score} נקודות מתוך ${totalRounds * POINTS_PER_CORRECT}`;
             settlementsList.innerHTML = '';
+            if (isMobile()) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
             startFireworks();
         }
 
@@ -883,13 +1031,21 @@
         const fwCtx = fwCanvas.getContext('2d');
         let particles = [];
         let rockets = [];
+        let missiles = [];
         let fwRunning = false;
         let fwAnimId = null;
 
+        const isMobile = () => window.innerWidth <= 768;
+
         function resizeFwCanvas() {
-            const panel = document.querySelector('.left-panel');
-            fwCanvas.width = panel.offsetWidth;
-            fwCanvas.height = panel.offsetHeight;
+            if (isMobile()) {
+                fwCanvas.width = window.innerWidth;
+                fwCanvas.height = window.innerHeight;
+            } else {
+                const panel = document.querySelector('.left-panel');
+                fwCanvas.width = panel.offsetWidth;
+                fwCanvas.height = panel.offsetHeight;
+            }
         }
         window.addEventListener('resize', resizeFwCanvas);
         resizeFwCanvas();
@@ -910,6 +1066,17 @@
                 targetY: Math.random() * fwCanvas.height * 0.35 + 40,
                 speed: 5 + Math.random() * 3,
                 color: randomColor()
+            });
+        }
+
+        function spawnMissile() {
+            const startX = fwCanvas.width * 0.6 + Math.random() * fwCanvas.width * 0.4;
+            missiles.push({
+                x: startX,
+                y: -30 - Math.random() * 40,
+                vx: -(2.5 + Math.random() * 1.5),
+                vy: 2.5 + Math.random() * 1.5,
+                trail: []
             });
         }
 
@@ -967,6 +1134,86 @@
                 fwCtx.fillStyle = p.color;
                 fwCtx.fill();
             }
+
+            fwCtx.globalCompositeOperation = 'source-over';
+            for (let i = missiles.length - 1; i >= 0; i--) {
+                const m = missiles[i];
+                m.trail.push({ x: m.x, y: m.y });
+                if (m.trail.length > 25) m.trail.shift();
+                m.x += m.vx;
+                m.y += m.vy;
+
+                const angle = Math.atan2(m.vy, m.vx);
+
+                for (let t = 0; t < m.trail.length; t++) {
+                    const ratio = t / m.trail.length;
+                    fwCtx.globalAlpha = ratio * 0.7;
+                    fwCtx.beginPath();
+                    fwCtx.arc(m.trail[t].x, m.trail[t].y, ratio * 3.5, 0, Math.PI * 2);
+                    fwCtx.fillStyle = `rgb(255,${Math.floor(100 + ratio * 80)},${Math.floor(ratio * 30)})`;
+                    fwCtx.fill();
+                }
+
+                fwCtx.globalAlpha = 1;
+                fwCtx.save();
+                fwCtx.translate(m.x, m.y);
+                fwCtx.rotate(angle);
+
+                fwCtx.fillStyle = '#c8d0d8';
+                fwCtx.beginPath();
+                fwCtx.ellipse(0, 0, 16, 5, 0, 0, Math.PI * 2);
+                fwCtx.fill();
+
+                fwCtx.fillStyle = '#ff3333';
+                fwCtx.beginPath();
+                fwCtx.moveTo(16, 0);
+                fwCtx.lineTo(10, -4.5);
+                fwCtx.lineTo(10, 4.5);
+                fwCtx.closePath();
+                fwCtx.fill();
+
+                fwCtx.fillStyle = '#667788';
+                fwCtx.beginPath();
+                fwCtx.moveTo(-12, -4);
+                fwCtx.lineTo(-18, -10);
+                fwCtx.lineTo(-8, -4);
+                fwCtx.closePath();
+                fwCtx.fill();
+                fwCtx.beginPath();
+                fwCtx.moveTo(-12, 4);
+                fwCtx.lineTo(-18, 10);
+                fwCtx.lineTo(-8, 4);
+                fwCtx.closePath();
+                fwCtx.fill();
+
+                fwCtx.fillStyle = '#44ccff';
+                fwCtx.beginPath();
+                fwCtx.arc(6, 0, 2.5, 0, Math.PI * 2);
+                fwCtx.fill();
+
+                fwCtx.fillStyle = '#ff8800';
+                fwCtx.beginPath();
+                fwCtx.moveTo(-14, 0);
+                fwCtx.lineTo(-22 - Math.random() * 6, -3);
+                fwCtx.lineTo(-22 - Math.random() * 6, 3);
+                fwCtx.closePath();
+                fwCtx.fill();
+                fwCtx.fillStyle = '#ffcc00';
+                fwCtx.beginPath();
+                fwCtx.moveTo(-14, 0);
+                fwCtx.lineTo(-19 - Math.random() * 4, -1.5);
+                fwCtx.lineTo(-19 - Math.random() * 4, 1.5);
+                fwCtx.closePath();
+                fwCtx.fill();
+
+                fwCtx.restore();
+
+                if (m.x < -40 || m.y > fwCanvas.height + 40) {
+                    missiles.splice(i, 1);
+                }
+            }
+            fwCtx.globalCompositeOperation = 'lighter';
+
             fwCtx.globalAlpha = 1;
             fwAnimId = requestAnimationFrame(fwLoop);
         }
@@ -975,6 +1222,7 @@
             fwRunning = true;
             particles = [];
             rockets = [];
+            missiles = [];
             resizeFwCanvas();
             fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
 
@@ -986,6 +1234,14 @@
                 launched++;
                 if (launched > 12) clearInterval(launchInterval);
             }, 300);
+
+            let missileCount = 0;
+            const missileInterval = setInterval(() => {
+                if (!fwRunning) { clearInterval(missileInterval); return; }
+                spawnMissile();
+                missileCount++;
+                if (missileCount > 8) clearInterval(missileInterval);
+            }, 500);
 
             fwLoop();
             setTimeout(() => stopFireworks(), 5000);
@@ -1036,6 +1292,7 @@
         });
 
         nextBtn.addEventListener('click', () => startRound());
+        endBtn.addEventListener('click', () => endGame());
 
         restartBtn.addEventListener('click', () => {
             stopFireworks();
