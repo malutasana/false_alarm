@@ -1072,6 +1072,9 @@
                         : `<div class="message reveal">היישוב המומצא: ${fakeSettlement}</div>`;
                     showMobileBar(msg, 'סיבוב הבא', () => startRound());
                 }
+                if (isMobile()) {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
             }, delay);
         }
 
