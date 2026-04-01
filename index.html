@@ -535,6 +535,10 @@
             border: none;
         }
 
+        .mobile-action-bar {
+            display: none;
+        }
+
         /* ========== Mobile ========== */
         @media (max-width: 768px) {
             body {
@@ -692,6 +696,46 @@
             .round-transition-text {
                 font-size: 28px;
             }
+
+            .mobile-action-bar {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: linear-gradient(to top, #0c1a2e 70%, rgba(12, 26, 46, 0.95));
+                border-top: 2px solid #22b2c9;
+                padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+                z-index: 20;
+                text-align: center;
+                box-shadow: 0 -4px 24px rgba(0,0,0,0.6);
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+                animation: slideUp 0.3s ease;
+            }
+
+            .mobile-action-bar .message {
+                font-size: 15px;
+                padding: 6px 14px;
+                margin: 0;
+            }
+
+            .mobile-action-bar .mobile-bar-btn {
+                padding: 12px 36px;
+                font-size: 17px;
+                font-weight: 700;
+                font-family: 'Heebo', sans-serif;
+                border: 2px solid #22b2c9;
+                background: rgba(34, 178, 201, 0.15);
+                color: #22b2c9;
+                border-radius: 8px;
+                cursor: pointer;
+            }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
         }
     </style>
 </head>
@@ -770,6 +814,8 @@
             <canvas id="fireworksCanvas"></canvas>
             <div id="mapContainer"></div>
         </div>
+
+        <div class="mobile-action-bar" id="mobileActionBar"></div>
 
         <div class="round-transition" id="roundTransition">
             <div class="round-transition-text" id="roundTransitionText"></div>
@@ -935,6 +981,7 @@
             roundActive = true;
             clearMessage();
             hideMap();
+            hideMobileBar();
             nextBtn.style.display = 'none';
             endBtn.style.display = 'none';
             updateStats();
@@ -968,6 +1015,7 @@
                 element.classList.add('correct-guess');
                 score += POINTS_PER_CORRECT;
                 showMessage('כל הכבוד! מצאת את המומצא! +5 נקודות', 'correct');
+                showMobileBar('<div class="message correct">כל הכבוד! +5 נקודות</div>', null, null);
                 hideMap();
                 endRound(true);
             } else {
@@ -979,6 +1027,7 @@
 
                 if (guessesLeft > 0) {
                     showMessage('לא נכון! נשאר לך עוד ניחוש אחד', 'wrong');
+                    showMobileBar('<div class="message wrong">לא נכון! נשאר עוד ניחוש</div>', null, null);
                 } else {
                     showMessage('נגמרו הניחושים!', 'wrong');
                     endRound(false);
@@ -1003,6 +1052,7 @@
                         }
                     });
                     showMessage(`היישוב המומצא היה: ${fakeSettlement}`, 'reveal');
+                    showMobileBar(`<div class="message reveal">היישוב המומצא: ${fakeSettlement}</div>`, null, null);
                 }, 800);
             }
 
@@ -1010,13 +1060,23 @@
             setTimeout(() => {
                 if (currentRound >= totalRounds) {
                     endBtn.style.display = 'inline-block';
+                    showMobileBar(
+                        `<div class="message reveal">היישוב המומצא: ${fakeSettlement}</div>`,
+                        'סיום',
+                        () => endGame()
+                    );
                 } else {
                     nextBtn.style.display = 'inline-block';
+                    const msg = guessedCorrectly
+                        ? '<div class="message correct">כל הכבוד! +5 נקודות</div>'
+                        : `<div class="message reveal">היישוב המומצא: ${fakeSettlement}</div>`;
+                    showMobileBar(msg, 'סיבוב הבא', () => startRound());
                 }
             }, delay);
         }
 
         function endGame() {
+            hideMobileBar();
             showScreen(endScreen);
             finalLabel.textContent = `הרווחת ${score} נקודות מתוך ${totalRounds * POINTS_PER_CORRECT}`;
             settlementsList.innerHTML = '';
@@ -1256,6 +1316,26 @@
         }
 
         // --- Map popup for wrong guesses ---
+        // --- Mobile action bar ---
+        const mobileActionBar = document.getElementById('mobileActionBar');
+
+        function showMobileBar(messageHtml, btnText, btnAction) {
+            if (!isMobile()) return;
+            let html = '';
+            if (messageHtml) html += messageHtml;
+            if (btnText) html += `<button class="mobile-bar-btn" id="mobileBarBtn">${btnText}</button>`;
+            mobileActionBar.innerHTML = html;
+            mobileActionBar.style.display = 'flex';
+            if (btnText && btnAction) {
+                document.getElementById('mobileBarBtn').addEventListener('click', btnAction);
+            }
+        }
+
+        function hideMobileBar() {
+            mobileActionBar.style.display = 'none';
+            mobileActionBar.innerHTML = '';
+        }
+
         const mapContainer = document.getElementById('mapContainer');
 
         function showMapForSettlement(name) {
