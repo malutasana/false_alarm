@@ -375,23 +375,12 @@
         }
 
         /* Game Over */
-        .final-score {
-            font-size: 80px;
-            font-weight: 900;
-            color: #d4a020;
-            text-shadow: 0 0 40px rgba(212, 160, 32, 0.4);
-        }
-
         .final-label {
-            font-size: 24px;
-            color: #667788;
-            margin-top: 8px;
-        }
-
-        .final-max {
-            font-size: 18px;
-            color: #445566;
-            margin-top: 4px;
+            font-size: 32px;
+            font-weight: 700;
+            color: #d4a020;
+            text-shadow: 0 0 30px rgba(212, 160, 32, 0.3);
+            margin-top: 16px;
         }
 
         /* Loading */
@@ -491,9 +480,7 @@
         }
 
         #endScreen .game-title,
-        #endScreen .final-score,
         #endScreen .final-label,
-        #endScreen .final-max,
         #endScreen .restart-btn {
             position: relative;
             z-index: 6;
@@ -610,15 +597,14 @@
                 <div class="guesses-label">ניחושים נותרים</div>
                 <div class="message-area" id="messageArea"></div>
                 <button class="next-btn" id="nextBtn" style="display:none">סיבוב הבא ←</button>
+                <button class="next-btn" id="endBtn" style="display:none">סיום</button>
             </div>
 
             <!-- Game Over Screen -->
             <div class="screen" id="endScreen">
                 <div class="end-congrats" id="endCongrats">כל הכבוד!</div>
                 <div class="game-title">המשחק נגמר!</div>
-                <div class="final-score" id="finalScore">0</div>
-                <div class="final-label">נקודות</div>
-                <div class="final-max" id="finalMax">מתוך 25 אפשריות</div>
+                <div class="final-label" id="finalLabel">הרווחת 0 נקודות מתוך 20</div>
                 <button class="restart-btn" id="restartBtn">שחק שוב</button>
             </div>
 
@@ -689,8 +675,8 @@
         const messageArea = document.getElementById('messageArea');
         const nextBtn = document.getElementById('nextBtn');
         const restartBtn = document.getElementById('restartBtn');
-        const finalScore = document.getElementById('finalScore');
-        const finalMax = document.getElementById('finalMax');
+        const endBtn = document.getElementById('endBtn');
+        const finalLabel = document.getElementById('finalLabel');
         const guessDot1 = document.getElementById('guessDot1');
         const guessDot2 = document.getElementById('guessDot2');
         const roundTransition = document.getElementById('roundTransition');
@@ -791,6 +777,7 @@
             clearMessage();
             hideMap();
             nextBtn.style.display = 'none';
+            endBtn.style.display = 'none';
             updateStats();
             updateGuessDots();
 
@@ -863,7 +850,7 @@
             const delay = guessedCorrectly ? 1500 : 2500;
             setTimeout(() => {
                 if (currentRound >= totalRounds) {
-                    endGame();
+                    endBtn.style.display = 'inline-block';
                 } else {
                     nextBtn.style.display = 'inline-block';
                 }
@@ -872,8 +859,7 @@
 
         function endGame() {
             showScreen(endScreen);
-            finalScore.textContent = score;
-            finalMax.textContent = `מתוך ${totalRounds * POINTS_PER_CORRECT} אפשריות`;
+            finalLabel.textContent = `הרווחת ${score} נקודות מתוך ${totalRounds * POINTS_PER_CORRECT}`;
             settlementsList.innerHTML = '';
             startFireworks();
         }
@@ -1036,6 +1022,7 @@
         });
 
         nextBtn.addEventListener('click', () => startRound());
+        endBtn.addEventListener('click', () => endGame());
 
         restartBtn.addEventListener('click', () => {
             stopFireworks();
